@@ -1,6 +1,21 @@
+const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const fetchData = require('./fetchData');
 require('dotenv').config();
+
+// Server
+const app = express();
+app.get('/test', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        message: `U hit /test endpoint from ${req.originalUrl}`,
+    });
+});
+
+const port = process.env.PORT || 3030;
+app.listen(port, () => {
+    console.log(`Server is listening at port ${port}`);
+});
 
 // BOT CONFIGS
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
