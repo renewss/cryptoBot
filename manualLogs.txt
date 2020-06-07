@@ -1,0 +1,3 @@
+LocalBitcoins - sends larger values than its web version && sometimes gives error(NaN)
+Bitzlato - was not implemented, due to API errors (it doesn't work)
+for Garantex - converted from Rub to other using own values && form BTC to ETH using general value

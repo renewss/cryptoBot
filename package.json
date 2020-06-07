@@ -1,0 +1,24 @@
+{
+    "name": "cryptobot",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "nodemon index.js",
+        "start-now": "node index.js"
+    },
+    "author": "renewss",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^0.19.2",
+        "dotenv": "^8.2.0",
+        "node-telegram-bot-api": "^0.50.0",
+        "xml2json": "^0.12.0"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.4"
+    },
+    "engines": {
+        "node": "12.14.1"
+    }
+}
