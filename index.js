@@ -1,9 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
 const fetchData = require('./fetchData');
+require('dotenv').config();
 
 // BOT CONFIGS
-const token = '981430044:AAEcfgX-VFhWl5zVdqJbA6RG5NqWWkR0uDw';
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 // GLOBAL VARIABLES
 let data = new Array();

@@ -4,8 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "nodemon index.js",
-        "start-now": "node index.js"
+        "start": "node index.js",
+        "start:dev": "nodemon index.js"
     },
     "author": "renewss",
     "license": "ISC",
