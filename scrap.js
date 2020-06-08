@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 async function scrap() {
+    // scrapper for currency rates
     const url = 'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186';
     const resp = (await axios.get(url)).data;
 

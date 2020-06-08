@@ -1,11 +1,14 @@
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 const fetchData = require('./fetchData');
 require('dotenv').config();
 
 // Server
 const app = express();
 app.get('/', (req, res) => {
+    console.log(`ENDPOINT / accepted request at ${new Date().getUTCDate}`);
+
     res.status(200).json({
         status: 'success',
         message: 'U hit / endpoint',
@@ -35,8 +38,14 @@ async function fetch() {
 fetch();
 
 // HELPER FUNCTIONS
+// keep heroku server alive
+async function keepAlive() {
+    await axios.get('https://rcryptosbot.herokuapp.com/test');
+}
+setInterval(keepAlive, 25 * 60 * 1000);
+
+// deep copy function
 function dcf(inObject) {
-    // deep copy function
     let outObject, value, key;
 
     if (typeof inObject !== 'object' || inObject === null) {
