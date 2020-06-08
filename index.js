@@ -5,10 +5,10 @@ require('dotenv').config();
 
 // Server
 const app = express();
-app.get('/test', (req, res) => {
+app.get('/', (req, res) => {
     res.status(200).json({
         status: 'success',
-        message: `U hit /test endpoint from ${req.originalUrl}`,
+        message: 'U hit / endpoint',
     });
 });
 
