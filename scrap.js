@@ -1,16 +1,23 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
+const pptr = require('puppeteer');
 
-async function scrap() {
-    // scrapper for currency rates
-    const url = 'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186';
-    const resp = (await axios.get(url)).data;
+module.exports = async function scrap(url, match = [], lenght, offset = 2) {
+    try {
+        // scrapper for currency rates
+        const browser = await pptr.launch();
+        const page = await browser.newPage();
+        await page.goto(url, { waitUntil: 'networkidle0' });
+        const html = await page.evaluate(() => document.querySelector('*').outerHTML);
+        // console.log(html);
 
-    let data = []; // base USD, 0 - EUR 1 - GBP 2 - IDR 3 - RUB
-    const indexes = [2124, 2126, 2138, 2186]; // from url
-    for (let i = 0; i < 4; i++) {
-        data.push(resp.substr(resp.search(`pid-${indexes[i]}-last`) + 15, 6).replace(',', ''));
+        let data = new Array();
+        Array.prototype.forEach.call(match, (m) => {
+            data.push(html.substr(html.search(m) + m.length + offset, lenght));
+        });
+        await browser.close();
+
+        return data;
+    } catch (err) {
+        console.log('ERROR from SCRAP() function', err);
     }
-    console.log(data);
-}
-scrap();
+};

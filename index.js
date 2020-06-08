@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
 
 const port = process.env.PORT || 3030;
 app.listen(port, () => {
-    console.log(`Server is listening at port ${port}`);
+    console.log(`Server is listening on port ${port}`);
 });
 
 // BOT CONFIGS
@@ -27,7 +27,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let data = new Array();
 // supported currencies must be added here
 const cryptoShort = { Bitcoin: 'BTC', Ethereum: 'ETH' };
-const currenShort = { US_Dollar: 'USD', Euro: 'EUR', GB_Pound: 'GBP', Rubl: 'RUB' };
+const currenShort = { US_Dollar: 'USD', Euro: 'EUR', GB_Pound: 'GBP', Rubl: 'RUB', Indonesian_R: 'IDR' };
 
 // FETCHING INFORAMTION FROM APIs
 async function fetch() {
@@ -71,7 +71,7 @@ function makeList(crypt, curr, list = data) {
     list.forEach((el) => {
         response += `<b>${el.host.padEnd(15, ' ')}</b>:${el[crypt][curr]} ${curr}`;
         if (el.diff) {
-            response += `    <b>${el.diff.percent}%</b>   ${el.diff.value}\n`;
+            response += `    <b>${el.diff.percent}%</b>   ${el.diff.value}${curr}\n`;
         } else {
             response += '\n';
         }
@@ -90,10 +90,8 @@ function sort(crypt, curr, param = 1) {
     list.forEach((el, i) => {
         if (i === 0) return;
         list[i].diff = {
-            value: Math.round(Math.abs(list[i][crypt][curr] - list[0][crypt][curr]) * 100) / 100,
-            percent:
-                Math.round((Math.abs(list[i][crypt][curr] - list[0][crypt][curr]) / list[0][crypt][curr]) * 10000) /
-                100,
+            value: Math.round((list[i][crypt][curr] - list[0][crypt][curr]) * 100) / 100,
+            percent: Math.round(((list[i][crypt][curr] - list[0][crypt][curr]) / list[0][crypt][curr]) * 10000) / 100,
         };
     });
 
@@ -162,24 +160,10 @@ function sendCurrenMenu(cb, symbols) {
         message_id: cb.message.message_id,
         reply_markup: {
             inline_keyboard: [
-                [
-                    {
-                        text: `USD`,
-                        callback_data: `2_${symbols[1]}_USD_0`,
-                    },
-                    {
-                        text: `EUR`,
-                        callback_data: `2_${symbols[1]}_EUR_0`,
-                    },
-                    {
-                        text: `GBP`,
-                        callback_data: `2_${symbols[1]}_GBP_0`,
-                    },
-                    {
-                        text: `RUB`,
-                        callback_data: `2_${symbols[1]}_RUB_0`,
-                    },
-                ],
+                Object.values(currenShort).map((el) => {
+                    return { text: el, callback_data: `2_${symbols[1]}_${el}_0` };
+                }),
+
                 [
                     {
                         text: 'Back',

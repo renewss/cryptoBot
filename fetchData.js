@@ -1,12 +1,12 @@
 const axios = require('axios');
-const xml2json = require('xml2json');
+const scrap = require('./scrap');
 
 // to handle exceptions locally for every axios request
 async function axiosWrp(url, params = {}) {
     try {
         return await axios.get(url, params);
     } catch (err) {
-        console.log('Error from FETCHING *******************', err);
+        console.log('Error from AXIOSWRP() function *******************', err);
     }
 }
 
@@ -17,32 +17,26 @@ function format(rate) {
 // Fetcher, cases are written for every API
 module.exports = async function fetchData() {
     try {
-        const now = new Date();
-        const date = {
-            day: now.getDate() > 9 ? now.getDate() : `0${now.getDate()}`,
-            month: now.getMonth() + 1 > 9 ? now.getMonth() + 1 : `0${now.getMonth() + 1}`,
-            year: now.getFullYear(),
-        };
-        // Getting currency rates
-        const xml = (
+        // scrapper for currency rates
+        const resp = (
             await axiosWrp(
-                `http://www.cbr.ru/scripts/XML_daily.asp?date_req=${date.day}/${date.month}/${date.year}&VAL_NM_RQ=R01235`
+                'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186'
             )
         ).data;
-        const currenRates = xml2json.toJson(xml, { object: true }).ValCurs.Valute; // base RUB
-        /* 0 - AUD - Australia
-           2 - GBP
-           10 - USD
-           11 - EUR
-           14 - CAD - Canada
-           27 - UAH - Ukraine
-         */
+        const indexes = [2124, 2126, 2138, 2186]; // from url
+        let currenRates = []; // base USD, 0 - EUR 1 - GBP 2 - IDR 3 - RUB
+        for (let i = 0; i < 4; i++) {
+            currenRates.push(resp.substr(resp.search(`pid-${indexes[i]}-last`) + 15, 6).replace(',', ''));
+        }
+        // console.log(currenRates);
 
-        const cryptoRates = (await axiosWrp('https://api-pub.bitfinex.com/v2/tickers?symbols=tETHBTC')).data[0][7]; // ETH to BTC
+        // cyrpto rate,   ETH to BTC
+        const cryptoRates = (await axiosWrp('https://api-pub.bitfinex.com/v2/tickers?symbols=tETHBTC')).data[0][7];
 
         // *******************************************
         let content = new Array();
-        let reqTemp; // variable for temporarily storing request data
+        let reqTemp,
+            storeTemp = {}; // variable for temporarily storing request data
 
         reqTemp = (await axiosWrp('https://api.coindesk.com/v1/bpi/currentprice.json')).data;
         content[0] = {
@@ -51,15 +45,15 @@ module.exports = async function fetchData() {
                 USD: format(reqTemp.bpi.USD.rate.replace(',', '')),
                 EUR: format(reqTemp.bpi.EUR.rate.replace(',', '')),
                 GBP: format(reqTemp.bpi.GBP.rate.replace(',', '')),
-                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[10].Value.replace(',', '.')),
+                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3]),
+                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2]),
             },
             ETH: {
                 USD: format(reqTemp.bpi.USD.rate.replace(',', '') * cryptoRates),
                 EUR: format(reqTemp.bpi.EUR.rate.replace(',', '') * cryptoRates),
                 GBP: format(reqTemp.bpi.GBP.rate.replace(',', '') * cryptoRates),
-                RUB: format(
-                    reqTemp.bpi.USD.rate.replace(',', '') * currenRates[10].Value.replace(',', '.') * cryptoRates
-                ),
+                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3] * cryptoRates),
+                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2] * cryptoRates),
             },
         };
         reqTemp = (await axiosWrp('https://api.binance.com/api/v3/ticker/24hr')).data;
@@ -70,12 +64,14 @@ module.exports = async function fetchData() {
                 EUR: format(reqTemp[695].lastPrice),
                 GBP: format(reqTemp[11].lastPrice / reqTemp[572].lastPrice),
                 RUB: format(reqTemp[672].lastPrice),
+                IDR: format(reqTemp[786].lastPrice),
             },
             ETH: {
                 USD: format(reqTemp[12].lastPrice),
                 EUR: format(reqTemp[696].lastPrice),
                 GBP: format(reqTemp[12].lastPrice / reqTemp[572].lastPrice),
                 RUB: format(reqTemp[673].lastPrice),
+                IDR: format(reqTemp[12].lastPrice * reqTemp[788].lastPrice),
             },
         };
 
@@ -87,12 +83,14 @@ module.exports = async function fetchData() {
                 EUR: format(reqTemp.EUR.avg_1h),
                 GBP: format(reqTemp.GBP.avg_1h),
                 RUB: format(reqTemp.RUB.avg_1h),
+                IDR: format(reqTemp.IDR.rates.last),
             },
             ETH: {
                 USD: format(reqTemp.USD.avg_1h / reqTemp.ETH.rates.last),
                 EUR: format(reqTemp.EUR.avg_1h / reqTemp.ETH.rates.last),
                 GBP: format(reqTemp.GBP.avg_1h / reqTemp.ETH.rates.last),
                 RUB: format(reqTemp.RUB.avg_1h / reqTemp.ETH.rates.last),
+                IDR: format(reqTemp.IDR.rates.last / reqTemp.ETH.rates.last),
             },
         };
 
@@ -100,20 +98,84 @@ module.exports = async function fetchData() {
         content[3] = {
             host: 'Garantex',
             BTC: {
-                USD: format(reqTemp[0].price / currenRates[10].Value.replace(',', '.')),
-                EUR: format(reqTemp[0].price / currenRates[11].Value.replace(',', '.')),
-                GBP: format(reqTemp[0].price / currenRates[2].Value.replace(',', '.')),
+                USD: format(reqTemp[0].price / currenRates[3]),
+                EUR: format((reqTemp[0].price / currenRates[3]) * currenRates[0]),
+                GBP: format((reqTemp[0].price / currenRates[3]) * currenRates[1]),
                 RUB: format(reqTemp[0].price),
+                IDR: format((reqTemp[0].price / currenRates[3]) * currenRates[2]),
             },
             ETH: {
-                USD: format((reqTemp[0].price / currenRates[10].Value.replace(',', '.')) * cryptoRates),
-                EUR: format((reqTemp[0].price / currenRates[11].Value.replace(',', '.')) * cryptoRates),
-                GBP: format((reqTemp[0].price / currenRates[2].Value.replace(',', '.')) * cryptoRates),
+                USD: format((reqTemp[0].price / currenRates[3]) * cryptoRates),
+                EUR: format((reqTemp[0].price / currenRates[3]) * currenRates[0] * cryptoRates),
+                GBP: format((reqTemp[0].price / currenRates[3]) * currenRates[1] * cryptoRates),
                 RUB: format(reqTemp[0].price * cryptoRates),
+                IDR: format((reqTemp[0].price / currenRates[3]) * currenRates[2] * cryptoRates),
+            },
+        };
+
+        reqTemp = (await axiosWrp('https://paxful.com/data/average')).data;
+        content[4] = {
+            host: ' Paxful',
+            BTC: {
+                USD: format(reqTemp.BTC_USD.avg_1h),
+                EUR: format(reqTemp.BTC_EUR.avg_1h),
+                GBP: format(reqTemp.BTC_GBP.avg_1h),
+                RUB: format(reqTemp.BTC_RUB.avg_1h),
+                IDR: format(reqTemp.BTC_IDR.avg_1h),
+            },
+            ETH: {
+                USD: format(reqTemp.BTC_USD.avg_1h * cryptoRates),
+                EUR: format(reqTemp.BTC_EUR.avg_1h * cryptoRates),
+                GBP: format(reqTemp.BTC_GBP.avg_1h * cryptoRates),
+                RUB: format(reqTemp.BTC_RUB.avg_1h * cryptoRates),
+                IDR: format(reqTemp.BTC_IDR.avg_1h * cryptoRates),
+            },
+        };
+
+        reqTemp = (await axiosWrp('https://hodlhodl.com/api/v1/offers')).data;
+        let counter = 0;
+        for (let i = 0; i < reqTemp.offers.length && counter < 5; i++) {
+            const curr = reqTemp.offers[i].currency_code;
+            if (curr === 'USD' || curr === 'EUR' || curr === 'RUB' || curr === 'GBP') {
+                if (!storeTemp[curr]) {
+                    storeTemp[curr] = reqTemp.offers[i].price;
+                    ++counter;
+                }
+            }
+        }
+        content[5] = {
+            host: 'Hodlhodl',
+            BTC: {
+                USD: format(storeTemp.USD),
+                EUR: format(storeTemp.EUR),
+                GBP: format(storeTemp.GBP),
+                RUB: format(storeTemp.RUB),
+                IDR: format(storeTemp.USD * currenRates[2]),
+            },
+            ETH: {
+                USD: format(storeTemp.USD * cryptoRates),
+                EUR: format(storeTemp.EUR * cryptoRates),
+                GBP: format(storeTemp.GBP * cryptoRates),
+                RUB: format(storeTemp.RUB * cryptoRates),
+                IDR: format(storeTemp.USD * currenRates[2] * cryptoRates),
+            },
+        };
+
+        // no API, used web scrapping
+        storeTemp = new Array();
+        storeTemp = [...(await scrap('https://risex.net/market/all', ['calculator-form-container__block-number'], 6))];
+        content[6] = {
+            host: 'Risex',
+            BTC: {
+                USD: format(storeTemp[0] / currenRates[3]),
+                EUR: format((storeTemp[0] / currenRates[3]) * currenRates[0]),
+                GBP: format((storeTemp[0] / currenRates[3]) * currenRates[1]),
+                RUB: format(storeTemp[0]),
+                IDR: format((storeTemp[0] / currenRates[3]) * currenRates[2]),
             },
         };
         return content;
     } catch (err) {
-        console.log('Error from FETCHING *******************', err);
+        console.log('Error from FETCH() function *******************', err);
     }
 };
