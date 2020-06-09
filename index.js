@@ -69,11 +69,13 @@ function makeList(crypt, curr, list = data) {
     let response = `${crypt}\n`;
 
     list.forEach((el) => {
-        response += `<b>${el.host.padEnd(15, ' ')}</b>:${el[crypt][curr]} ${curr}`;
-        if (el.diff) {
-            response += `    <b>${el.diff.percent}%</b>   ${el.diff.value}${curr}\n`;
-        } else {
-            response += '\n';
+        if (el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number') {
+            response += `<b>${el.host.padEnd(15, ' ')}</b>:${el[crypt][curr]} ${curr}`;
+            if (el.diff) {
+                response += `    <b>${el.diff.percent}%</b>   ${el.diff.value}${curr}\n`;
+            } else {
+                response += '\n';
+            }
         }
     });
 
@@ -81,7 +83,10 @@ function makeList(crypt, curr, list = data) {
 }
 
 function sort(crypt, curr, param = 1) {
-    const list = dcf(data);
+    const list = dcf(
+        data.filter((el) => el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number')
+    );
+
     list.sort((a, b) => {
         const x = a[crypt][curr];
         const y = b[crypt][curr];

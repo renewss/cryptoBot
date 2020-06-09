@@ -18,16 +18,10 @@ function format(rate) {
 module.exports = async function fetchData() {
     try {
         // scrapper for currency rates
-        const resp = (
-            await axiosWrp(
-                'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186'
-            )
-        ).data;
-        const indexes = [2124, 2126, 2138, 2186]; // from url
-        let currenRates = []; // base USD, 0 - EUR 1 - GBP 2 - IDR 3 - RUB
-        for (let i = 0; i < 4; i++) {
-            currenRates.push(resp.substr(resp.search(`pid-${indexes[i]}-last`) + 15, 6).replace(',', ''));
-        }
+        const urlCurrenRates =
+            'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186';
+        const indexes = ['pid-2124-last', 'pid-2126-last', 'pid-2138-last', 'pid-2186-last']; // from url
+        let currenRates = (await scrap(urlCurrenRates, indexes, 6)).map((el) => el.replace(',', '')); // base USD, 0 - EUR 1 - GBP 2 - IDR 3 - RUB
         // console.log(currenRates);
 
         // cyrpto rate,   ETH to BTC
