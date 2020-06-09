@@ -22,15 +22,15 @@ module.exports = async function fetchData() {
             'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186';
         const indexes = ['pid-2124-last', 'pid-2126-last', 'pid-2138-last', 'pid-2186-last']; // from url
         let currenRates = (await scrap(urlCurrenRates, indexes, 6)).map((el) => el.replace(',', '')); // base USD, 0 - EUR 1 - GBP 2 - IDR 3 - RUB
-        // console.log(currenRates);
+        console.log(currenRates);
 
         // cyrpto rate,   ETH to BTC
         const cryptoRates = (await axiosWrp('https://api-pub.bitfinex.com/v2/tickers?symbols=tETHBTC')).data[0][7];
 
         // *******************************************
         let content = new Array();
-        let reqTemp,
-            storeTemp = {}; // variable for temporarily storing request data
+        let reqTemp, // variable for temporarily storing request data
+            storeTemp = {};
 
         reqTemp = (await axiosWrp('https://api.coindesk.com/v1/bpi/currentprice.json')).data;
         content[0] = {
@@ -158,6 +158,7 @@ module.exports = async function fetchData() {
         // no API, used web scrapping
         storeTemp = new Array();
         storeTemp = [...(await scrap('https://risex.net/market/all', ['calculator-form-container__block-number'], 6))];
+        console.log(storeTemp);
         content[6] = {
             host: 'Risex',
             BTC: {
@@ -167,7 +168,59 @@ module.exports = async function fetchData() {
                 RUB: format(storeTemp[0]),
                 IDR: format((storeTemp[0] / currenRates[3]) * currenRates[2]),
             },
+            ETH: {
+                USD: format((storeTemp[0] / currenRates[3]) * cryptoRates),
+                EUR: format((storeTemp[0] / currenRates[3]) * currenRates[0] * cryptoRates),
+                GBP: format((storeTemp[0] / currenRates[3]) * currenRates[1] * cryptoRates),
+                RUB: format(storeTemp[0] * cryptoRates),
+                IDR: format((storeTemp[0] / currenRates[3]) * currenRates[2] * cryptoRates),
+            },
         };
+
+        // no API
+        storeTemp = new Array();
+        storeTemp = [...(await scrap('https://bitzlato.com/p2p?currency=RUB', ['jss158">Rate, ₽/BTC'], 6, 6))];
+        content[7] = {
+            host: 'Bitzlato',
+            BTC: {
+                USD: format(storeTemp[0] / currenRates[3]),
+                EUR: format((storeTemp[0] / currenRates[3]) * currenRates[0]),
+                GBP: format((storeTemp[0] / currenRates[3]) * currenRates[1]),
+                RUB: format(storeTemp[0]),
+                IDR: format((storeTemp[0] / currenRates[3]) * currenRates[2]),
+            },
+            ETH: {
+                USD: format((storeTemp[0] / currenRates[3]) * cryptoRates),
+                EUR: format((storeTemp[0] / currenRates[3]) * currenRates[0] * cryptoRates),
+                GBP: format((storeTemp[0] / currenRates[3]) * currenRates[1] * cryptoRates),
+                RUB: format(storeTemp[0] * cryptoRates),
+                IDR: format((storeTemp[0] / currenRates[3]) * currenRates[2] * cryptoRates),
+            },
+        };
+
+        reqTemp = (await axiosWrp('https://api.tokocrypto.com/v1/rates')).data;
+        storeTemp = {
+            BTC_IDR: reqTemp.data.find((el) => el.currencyPair === 'BTCIDR').buy,
+            ETH_IDR: reqTemp.data.find((el) => el.currencyPair === 'ETHIDR').buy,
+        };
+        content[8] = {
+            host: 'Tokocrypto',
+            BTC: {
+                USD: format(storeTemp.BTC_IDR / currenRates[2]),
+                EUR: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[0]),
+                GBP: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[1]),
+                RUB: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[3]),
+                IDR: format(storeTemp.BTC_IDR),
+            },
+            ETH: {
+                USD: format((storeTemp.BTC_IDR / currenRates[2]) * cryptoRates),
+                EUR: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[0] * cryptoRates),
+                GBP: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[1] * cryptoRates),
+                RUB: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[3] * cryptoRates),
+                IDR: format(storeTemp.BTC_IDR * cryptoRates),
+            },
+        };
+
         return content;
     } catch (err) {
         console.log('Error from FETCH() function *******************', err);
