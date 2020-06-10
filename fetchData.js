@@ -17,6 +17,11 @@ function format(rate) {
 // Fetcher, cases are written for every API
 module.exports = async function fetchData() {
     try {
+        let content = new Array();
+        let reqTemp,
+            reqTemp2, // variable for temporarily storing request data
+            storeTemp = {};
+
         // scrapper for currency rates
         const urlCurrenRates =
             'https://www.widgets.investing.com/live-currency-cross-rates?theme=darkTheme&pairs=2124,2126,2138,2186';
@@ -25,33 +30,11 @@ module.exports = async function fetchData() {
         console.log(currenRates);
 
         // cyrpto rate,   ETH to BTC
-        const cryptoRates = (await axiosWrp('https://api-pub.bitfinex.com/v2/tickers?symbols=tETHBTC')).data[0][7];
+        reqTemp = (await axiosWrp('https://api.binance.com/api/v3/ticker/24hr')).data;
+        const cryptoRates = reqTemp[0].lastPrice;
 
         // *******************************************
-        let content = new Array();
-        let reqTemp, // variable for temporarily storing request data
-            storeTemp = {};
-
-        reqTemp = (await axiosWrp('https://api.coindesk.com/v1/bpi/currentprice.json')).data;
         content[0] = {
-            host: 'Coindesk',
-            BTC: {
-                USD: format(reqTemp.bpi.USD.rate.replace(',', '')),
-                EUR: format(reqTemp.bpi.EUR.rate.replace(',', '')),
-                GBP: format(reqTemp.bpi.GBP.rate.replace(',', '')),
-                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3]),
-                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2]),
-            },
-            ETH: {
-                USD: format(reqTemp.bpi.USD.rate.replace(',', '') * cryptoRates),
-                EUR: format(reqTemp.bpi.EUR.rate.replace(',', '') * cryptoRates),
-                GBP: format(reqTemp.bpi.GBP.rate.replace(',', '') * cryptoRates),
-                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3] * cryptoRates),
-                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2] * cryptoRates),
-            },
-        };
-        reqTemp = (await axiosWrp('https://api.binance.com/api/v3/ticker/24hr')).data;
-        content[1] = {
             host: 'Binance',
             BTC: {
                 USD: format(reqTemp[11].lastPrice),
@@ -66,6 +49,25 @@ module.exports = async function fetchData() {
                 GBP: format(reqTemp[12].lastPrice / reqTemp[572].lastPrice),
                 RUB: format(reqTemp[673].lastPrice),
                 IDR: format(reqTemp[12].lastPrice * reqTemp[788].lastPrice),
+            },
+        };
+
+        reqTemp = (await axiosWrp('https://api.coindesk.com/v1/bpi/currentprice.json')).data;
+        content[1] = {
+            host: 'Coindesk',
+            BTC: {
+                USD: format(reqTemp.bpi.USD.rate.replace(',', '')),
+                EUR: format(reqTemp.bpi.EUR.rate.replace(',', '')),
+                GBP: format(reqTemp.bpi.GBP.rate.replace(',', '')),
+                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3]),
+                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2]),
+            },
+            ETH: {
+                USD: format(reqTemp.bpi.USD.rate.replace(',', '') * cryptoRates),
+                EUR: format(reqTemp.bpi.EUR.rate.replace(',', '') * cryptoRates),
+                GBP: format(reqTemp.bpi.GBP.rate.replace(',', '') * cryptoRates),
+                RUB: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[3] * cryptoRates),
+                IDR: format(reqTemp.bpi.USD.rate.replace(',', '') * currenRates[2] * cryptoRates),
             },
         };
 
@@ -158,7 +160,6 @@ module.exports = async function fetchData() {
         // no API, used web scrapping
         storeTemp = new Array();
         storeTemp = [...(await scrap('https://risex.net/market/all', ['calculator-form-container__block-number'], 6))];
-        console.log(storeTemp);
         content[6] = {
             host: 'Risex',
             BTC: {
@@ -213,13 +214,45 @@ module.exports = async function fetchData() {
                 IDR: format(storeTemp.BTC_IDR),
             },
             ETH: {
-                USD: format((storeTemp.BTC_IDR / currenRates[2]) * cryptoRates),
-                EUR: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[0] * cryptoRates),
-                GBP: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[1] * cryptoRates),
-                RUB: format((storeTemp.BTC_IDR / currenRates[2]) * currenRates[3] * cryptoRates),
-                IDR: format(storeTemp.BTC_IDR * cryptoRates),
+                USD: format(storeTemp.ETH_IDR / currenRates[2]),
+                EUR: format((storeTemp.ETH_IDR / currenRates[2]) * currenRates[0]),
+                GBP: format((storeTemp.ETH_IDR / currenRates[2]) * currenRates[1]),
+                RUB: format((storeTemp.ETH_IDR / currenRates[2]) * currenRates[3]),
+                IDR: format(storeTemp.ETH_IDR),
             },
         };
+
+        reqTemp = (await axiosWrp('https://indodax.com/api/btc_idr/ticker')).data;
+        reqTemp2 = (await axiosWrp('https://indodax.com/api/eth_idr/ticker')).data;
+        content[9] = {
+            host: 'Indodax',
+            BTC: {
+                USD: format(reqTemp.ticker.last / currenRates[2]),
+                EUR: format((reqTemp.ticker.last / currenRates[2]) * currenRates[0]),
+                GBP: format((reqTemp.ticker.last / currenRates[2]) * currenRates[1]),
+                RUB: format((reqTemp.ticker.last / currenRates[2]) * currenRates[3]),
+                IDR: format(reqTemp.ticker.last),
+            },
+            ETH: {
+                USD: format(reqTemp2.ticker.last / currenRates[2]),
+                EUR: format((reqTemp2.ticker.last / currenRates[2]) * currenRates[0]),
+                GBP: format((reqTemp2.ticker.last / currenRates[2]) * currenRates[1]),
+                RUB: format((reqTemp2.ticker.last / currenRates[2]) * currenRates[3]),
+                IDR: format(reqTemp2.ticker.last),
+            },
+        };
+
+        // reqTemp = (await axiosWrp('https://api.mybitx.com/api/1/tickers')).data;
+        // storeTemp = {
+        //     BTC_EUR: reqTemp.find((el) => el.pair === 'XBTEUR'),
+        //     BTC_GBP: reqTemp.find((el) => el.pair === 'XBTGBP'),
+        //     BTC_IDR: reqTemp.find((el) => el.pair === 'XBTIDR'),
+        //     ETH_XBT: reqTemp.find((el) => el.pair === 'ETHXBT'),
+        // };
+        // // content[10] = {
+        // //     host: 'Luno',
+        // //     BTC: {},
+        // // };
 
         return content;
     } catch (err) {
