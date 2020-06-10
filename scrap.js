@@ -4,7 +4,9 @@ const pptr = require('puppeteer');
 module.exports = async function scrap(url, match = [], lenght, offset = 2) {
     try {
         // scrapper for currency rates
-        const browser = await pptr.launch();
+        const browser = await pptr.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle0' });
         const html = await page.evaluate(() => document.querySelector('*').outerHTML);

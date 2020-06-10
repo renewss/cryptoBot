@@ -2,3 +2,4 @@ LocalBitcoins - sends larger values than its web version && sometimes gives erro
 Bitzlato - web scrapping, fetched BTC to RUB -> converted to other values using general info
 Garantex - converted from Rub to other using own values && form BTC to ETH using general value
 Chatex - only bot, no even web version(not implemented)
+
