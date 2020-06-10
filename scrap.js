@@ -3,7 +3,7 @@ const pptr = require('puppeteer');
 
 module.exports = async function scrap(url, match = [], lenght, offset = 2) {
     try {
-        // scrapper for currency rates
+        // scrapper for currency rates //
         const browser = await pptr.launch({
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
