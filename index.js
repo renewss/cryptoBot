@@ -3,8 +3,11 @@ const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const { table } = require('table');
-const fetchData = require('./fetchData');
 require('dotenv').config();
+
+const Db = require('./model');
+const fetchData = require('./fetchData');
+const utils = require('./utils');
 
 // SERVER
 const app = express();
@@ -56,64 +59,6 @@ async function keepAlive() {
 }
 setInterval(keepAlive, 25 * 60 * 1000);
 
-// deep copy function
-function dcf(inObject) {
-    let outObject, value, key;
-
-    if (typeof inObject !== 'object' || inObject === null) {
-        return inObject; // Return the value if inObject is not an object
-    }
-
-    // Create an array or object to hold the values
-    outObject = Array.isArray(inObject) ? [] : {};
-
-    for (key in inObject) {
-        value = inObject[key];
-
-        // Recursively (deep) copy for nested objects, including arrays
-        outObject[key] = typeof value === 'object' && value !== null ? dcf(value) : value;
-    }
-
-    return outObject;
-}
-
-function makeList(crypt, curr, list = data) {
-    let response = new Array();
-
-    list.forEach((el, i) => {
-        if (el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number') {
-            response.push([`${el.host}`, `${el[crypt][curr]} ${curr}`]);
-            if (el.diff) {
-                response[response.length - 1].push(`${el.diff.percent}%`, `${el.diff.value} ${curr}`);
-            }
-        }
-    });
-
-    const out = `<pre>${table(response)}</pre>`;
-
-    return out;
-}
-
-function sort(crypt, curr, param = 1) {
-    const list = dcf(
-        data.filter((el) => el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number')
-    );
-
-    list.sort((a, b) => {
-        const x = a[crypt][curr];
-        const y = b[crypt][curr];
-        return x < y ? -param : x > y ? param : 0;
-    });
-    list.forEach((el, i) => {
-        list[i].diff = {
-            value: Math.round((list[i][crypt][curr] - list[0][crypt][curr]) * 100) / 100,
-            percent: Math.round(((list[i][crypt][curr] - list[0][crypt][curr]) / list[0][crypt][curr]) * 10000) / 100,
-        };
-    });
-
-    return [...list];
-}
-
 // SENDERS
 function sendList(cb, symbols, isSort = false) {
     // Testing whether query is valid (contains valid currencies)
@@ -126,7 +71,7 @@ function sendList(cb, symbols, isSort = false) {
     // should list be sorted
     let inKey, resp;
     if (!isSort) {
-        resp = makeList(symbols[1], symbols[2]);
+        resp = utils.makeList(symbols[1], symbols[2], data);
         inKey = {
             inline_keyboard: [
                 [
@@ -148,8 +93,8 @@ function sendList(cb, symbols, isSort = false) {
             ],
         };
     } else {
-        const sortedList = [...sort(symbols[1], symbols[2], symbols[3])];
-        resp = makeList(symbols[1], symbols[2], sortedList);
+        const sortedList = [...utils.sort(symbols[1], symbols[2], symbols[3], data)];
+        resp = utils.makeList(symbols[1], symbols[2], sortedList);
         inKey = {
             inline_keyboard: [
                 [
@@ -225,6 +170,12 @@ function sendCryptoMenu(msg, isNew = false) {
 // REQUEST, RESPONSE
 bot.onText(/^(\/data|\/start)/, (msg) => {
     sendCryptoMenu(msg, true);
+});
+bot.onText(/\/compare/, (msg) => {
+    // const names = msg.text.split(' ');
+    // names.shift();
+    // const filtered = filterByName(names);
+    // const sorted = sort()
 });
 
 bot.on('callback_query', (cb) => {
