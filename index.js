@@ -1,10 +1,12 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const { table } = require('table');
 const fetchData = require('./fetchData');
 require('dotenv').config();
 
-// Server
+// SERVER
 const app = express();
 app.get('/', (req, res) => {
     console.log(`ENDPOINT / accepted request at ${new Date().getUTCDate}`);
@@ -14,13 +16,23 @@ app.get('/', (req, res) => {
         message: 'U hit / endpoint',
     });
 });
-
 const port = process.env.PORT || 3030;
 app.listen(port, () => {
     console.log(`Server is listening on port ${port}`);
 });
 
-// BOT CONFIGS
+// DATABASE
+const DB = process.env.MONGODB_KEY.replace('<password>', process.env.MONGODB_PASS);
+mongoose
+    .connect(DB, {
+        useNewUrlParser: true,
+        useCreateIndex: true,
+        useFindAndModify: false,
+        useUnifiedTopology: true, //required to avoid warning in console
+    })
+    .then(() => console.log('DB connection successful'));
+
+// BOT
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 // GLOBAL VARIABLES
@@ -66,20 +78,20 @@ function dcf(inObject) {
 }
 
 function makeList(crypt, curr, list = data) {
-    let response = `${crypt}\n`;
+    let response = new Array();
 
-    list.forEach((el) => {
+    list.forEach((el, i) => {
         if (el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number') {
-            response += `<b>${el.host.padEnd(15, ' ')}</b>:${el[crypt][curr]} ${curr}`;
+            response.push([`${el.host}`, `${el[crypt][curr]} ${curr}`]);
             if (el.diff) {
-                response += `    <b>${el.diff.percent}%</b>   ${el.diff.value} ${curr}\n`;
-            } else {
-                response += '\n';
+                response[response.length - 1].push(`${el.diff.percent}%`, `${el.diff.value} ${curr}`);
             }
         }
     });
 
-    return response;
+    const out = `<pre>${table(response)}</pre>`;
+
+    return out;
 }
 
 function sort(crypt, curr, param = 1) {
@@ -93,7 +105,6 @@ function sort(crypt, curr, param = 1) {
         return x < y ? -param : x > y ? param : 0;
     });
     list.forEach((el, i) => {
-        if (i === 0) return;
         list[i].diff = {
             value: Math.round((list[i][crypt][curr] - list[0][crypt][curr]) * 100) / 100,
             percent: Math.round(((list[i][crypt][curr] - list[0][crypt][curr]) / list[0][crypt][curr]) * 10000) / 100,
