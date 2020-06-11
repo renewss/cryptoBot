@@ -72,7 +72,7 @@ function makeList(crypt, curr, list = data) {
         if (el[crypt][curr] != 0 && el[crypt][curr] != Infinity && typeof el[crypt][curr] === 'number') {
             response += `<b>${el.host.padEnd(15, ' ')}</b>:${el[crypt][curr]} ${curr}`;
             if (el.diff) {
-                response += `    <b>${el.diff.percent}%</b>   ${el.diff.value}${curr}\n`;
+                response += `    <b>${el.diff.percent}%</b>   ${el.diff.value} ${curr}\n`;
             } else {
                 response += '\n';
             }
