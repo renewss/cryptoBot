@@ -40,13 +40,13 @@ exports.makeList = function makeList(crypt, curr, data) {
 };
 
 //
-exports.filterByName = function filterByName(names, data) {
-    console.log(names);
+exports.filterByIndex = function filterByIndex(index, data) {
     let list = new Array();
-    names.forEach((name) => {
-        list.push(data.find((el) => el.host === name));
+    index.forEach((el) => {
+        list.push(data[el]);
     });
-    return list;
+
+    return dcf(list);
 };
 
 // Sort list in either ascending or descending order
