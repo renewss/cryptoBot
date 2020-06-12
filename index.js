@@ -1,42 +1,19 @@
-const express = require('express');
-const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const { table } = require('table');
 require('dotenv').config();
 
 const Db = require('./model');
 const fetchData = require('./fetchData');
 const utils = require('./utils');
 
-// SERVER
-const app = express();
-app.get('/', (req, res) => {
-    console.log(`ENDPOINT / accepted request at ${new Date().getUTCDate}`);
-
-    res.status(200).json({
-        status: 'success',
-        message: 'U hit / endpoint',
-    });
-});
-const port = process.env.PORT || 3030;
-app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
-});
-
-// DATABASE
-const DB = process.env.MONGODB_KEY.replace('<password>', process.env.MONGODB_PASS);
-mongoose
-    .connect(DB, {
-        useNewUrlParser: true,
-        useCreateIndex: true,
-        useFindAndModify: false,
-        useUnifiedTopology: true, //required to avoid warning in console
-    })
-    .then(() => console.log('DB connection successful'));
-
 // BOT
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+let bot;
+if (process.env.NODE_ENV === 'production') {
+    bot = new TelegramBot(process.env.BOT_TOKEN);
+    bot.setWebHook(`${process.env.BOT_WEBHOOK_URL}${process.env.BOT_TOKEN}`);
+} else {
+    bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+}
 
 // GLOBAL VARIABLES
 let data = new Array();
@@ -53,13 +30,6 @@ async function fetch() {
     console.log(data);
 }
 fetch();
-
-// HELPER FUNCTIONS
-// keep heroku server alive
-async function keepAlive() {
-    await axios.get('https://rcryptosbot.herokuapp.com/test');
-}
-setInterval(keepAlive, 25 * 60 * 1000);
 
 // SENDERS
 function sendError(text, msg) {
@@ -280,3 +250,5 @@ bot.on('callback_query', (cb) => {
             break;
     }
 });
+
+module.exports = bot;
