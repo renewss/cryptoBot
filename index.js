@@ -77,7 +77,7 @@ async function fetchAndSend() {
     interval = await Db.findOne({ name: 'interval' });
     await sendMail();
     console.log('Mails sent');
-    setTimeout(fetchAndSend, interval.value * 1000 * 6);
+    setTimeout(fetchAndSend, interval.value * 1000 * 60);
 }
 fetchAndSend();
 
