@@ -4,7 +4,6 @@ require('dotenv').config();
 const Db = require('./model');
 const fetchData = require('./fetchData');
 const utils = require('./utils');
-const e = require('express');
 
 // BOT
 let bot;
@@ -16,20 +15,71 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // GLOBAL VARIABLES
-let data = new Array();
+let data = new Array(); //
+let interval; // interval of fetch and send cycle
 // supported currencies must be added here
 const cryptoShort = { Bitcoin: 'BTC', Ethereum: 'ETH' };
 const currenShort = { US_Dollar: 'USD', Euro: 'EUR', GB_Pound: 'GBP', Rubl: 'RUB', Indonesian_R: 'IDR' };
 // const hostsAll = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 const hostsAll = [0, 1, 2, 3];
 
-// FETCHING INFORAMTION FROM APIs
-async function fetch() {
+//
+// ************************************
+// mail sender on set interval
+async function sendMail() {
+    try {
+        const users = await Db.find({ name: 'user' });
+        let hosts = '';
+        hostsAll.forEach((el) => {
+            hosts += `${el}-`;
+        });
+
+        let symbols, list, inKey;
+        users.forEach((user) => {
+            symbols = user.value.split('_');
+            list = utils.makeList(symbols[0], symbols[1], data);
+            inKey = {
+                inline_keyboard: [
+                    [
+                        {
+                            text: 'Sort (ascending)',
+                            callback_data: `3_${hosts}_${symbols[0]}_${symbols[1]}_1`, // last number shows sorting parametres
+                        },
+                        {
+                            text: 'Sort (descending)',
+                            callback_data: `3_${hosts}_${symbols[0]}_${symbols[1]}_-1`,
+                        },
+                    ],
+                    [
+                        {
+                            text: 'Back',
+                            callback_data: `-3_${hosts}_${symbols[0]}`,
+                        },
+                    ],
+                ],
+            };
+
+            bot.sendMessage(user.value2, list, {
+                reply_markup: inKey,
+                parse_mode: 'HTML',
+            });
+        });
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+// FETCHING INFORAMTION FROM APIs and SEND MAILS
+async function fetchAndSend() {
     data = await fetchData();
     console.log('Data Fetched************');
-    console.log(data);
+    console.log(!!data);
+    interval = await Db.findOne({ name: 'interval' });
+    await sendMail();
+    console.log('Mails sent');
+    setTimeout(fetchAndSend, interval.value * 1000 * 6);
 }
-fetch();
+fetchAndSend();
 
 // SENDERS
 function sendOkMsg(text, msg) {
@@ -210,6 +260,18 @@ async function sendSubscribe(cb, symbols) {
     }
 }
 
+async function unsubscribe(cb) {
+    try {
+        const id = cb.message.chat.id;
+        await Db.findOneAndDelete({ value2: id });
+        sendOkMsg('Subscription deleted!', cb.message);
+    } catch (err) {
+        sendOkMsg('Error. Try again', cb.message);
+        console.log(err);
+    }
+}
+
+//
 // REQUEST, RESPONSE
 bot.onText(/^(\/data|\/start)/, (msg) => {
     sendCryptoMenu(msg, true);
@@ -254,6 +316,7 @@ bot.onText(/\/subscribe/, async (msg) => {
                 Object.values(currenShort).map((el) => {
                     return { text: el, callback_data: `subscribe_ETH_${el}` };
                 }),
+                [{ text: 'Unsubscribe', callback_data: 'unsubscribe_0_0' }],
                 [{ text: 'Back', callback_data: 'deleteMe' }],
             ],
         },
@@ -263,14 +326,59 @@ bot.onText(/\/help/, (msg) => {
     text =
         '/data - get menu with all platforms\n' +
         '/compare - get menu with specified platforms (use as <b>/compare platform1 platform2</b>...)\n' +
-        '/subscribe - subscribe to mailing (use as <b>/subscribe crypto currency</b>)';
+        '/subscribe - subscribe to mailing';
 
     sendOkMsg(text, msg);
+});
+// Authorized commands
+bot.onText(/\/interval/, async (msg) => {
+    try {
+        const text = msg.text.split(' ');
+        const value = text[2] * 1;
+        const pass = await Db.findOne({ name: 'password' });
+        if (text[1] !== pass.value) {
+            sendOkMsg('Incorrect password', msg);
+            return;
+        }
+
+        if (typeof value !== 'number' || value < 1 || value > 60 || isNaN(value)) {
+            sendOkMsg('Invalid value. Interval must be between 1 and 60', msg);
+            return;
+        }
+
+        await Db.findOneAndUpdate({ name: 'interval' }, { value });
+        sendOkMsg('Interval updated!', msg);
+    } catch (err) {
+        console.log(err);
+        sendOkMsg('Try again', msg);
+    }
+});
+bot.onText(/\/password/, async (msg) => {
+    try {
+        const text = msg.text.split(' ');
+        const value = text[2];
+        const pass = await Db.findOne({ name: 'password' });
+        if (text[1] !== pass.value) {
+            sendOkMsg('Incorrect password', msg);
+            return;
+        }
+
+        if (!value || value.length < 4) {
+            sendOkMsg('Invalid value. Password must contain at least 4 symbols', msg);
+            return;
+        }
+        await Db.findOneAndUpdate({ name: 'password' }, { value });
+        sendOkMsg('Password updated!', msg);
+    } catch (err) {
+        console.log(err);
+        sendOkMsg('Try again', msg);
+    }
 });
 
 bot.on('callback_query', (cb) => {
     const symbols = cb.data.split('_');
     bot.answerCallbackQuery(cb.id);
+    // console.log(symbols);
 
     // symbol[0] represents level of menu, every callback query sends its level of menu
     // if symbol[0] is positive number, GO to NEXT level of menu
@@ -292,6 +400,9 @@ bot.on('callback_query', (cb) => {
             break;
         case 'subscribe':
             sendSubscribe(cb, symbols);
+            break;
+        case 'unsubscribe':
+            unsubscribe(cb);
             break;
         case 'deleteMe':
             bot.deleteMessage(cb.message.chat.id, cb.message.message_id);

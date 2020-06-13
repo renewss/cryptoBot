@@ -4,11 +4,12 @@ const axios = require('axios');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
+const Db = require('./model');
 const bot = require('./index');
 
 // SERVER
 const app = express();
-app.use(bodyParser());
+app.use(bodyParser.json());
 app.get('/', (req, res) => {
     console.log(`ENDPOINT / accepted request at ${new Date().getUTCDate}`);
 
@@ -24,7 +25,7 @@ app.post(`/${process.env.BOT_TOKEN}`, (req, res) => {
 });
 
 const port = process.env.PORT || 3030;
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`Server is listening on port ${port}`);
 });
 
@@ -42,6 +43,10 @@ mongoose
 //
 // keep heroku server alive
 async function keepAlive() {
-    await axios.get('https://rcryptosbot.herokuapp.com/test');
+    try {
+        await axios.get('https://rcryptosbot.herokuapp.com/test');
+    } catch (err) {
+        console.log(err);
+    }
 }
 setInterval(keepAlive, 25 * 60 * 1000);

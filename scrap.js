@@ -1,4 +1,3 @@
-const axios = require('axios');
 const pptr = require('puppeteer');
 
 module.exports = async function scrap(url, match = [], lenght, offset = 2) {

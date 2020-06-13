@@ -13,7 +13,6 @@ const DbShema = new mongoose.Schema({
     },
     value2: {
         type: String,
-        unique: true,
     },
 });
 
