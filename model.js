@@ -11,6 +11,10 @@ const DbShema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    value2: {
+        type: String,
+        unique: true,
+    },
 });
 
 const Db = mongoose.model('db', DbShema);

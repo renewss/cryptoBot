@@ -4,6 +4,7 @@ require('dotenv').config();
 const Db = require('./model');
 const fetchData = require('./fetchData');
 const utils = require('./utils');
+const e = require('express');
 
 // BOT
 let bot;
@@ -19,8 +20,8 @@ let data = new Array();
 // supported currencies must be added here
 const cryptoShort = { Bitcoin: 'BTC', Ethereum: 'ETH' };
 const currenShort = { US_Dollar: 'USD', Euro: 'EUR', GB_Pound: 'GBP', Rubl: 'RUB', Indonesian_R: 'IDR' };
-const hostsAll = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-// const hostsAll = [0, 1, 2, 3];
+// const hostsAll = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+const hostsAll = [0, 1, 2, 3];
 
 // FETCHING INFORAMTION FROM APIs
 async function fetch() {
@@ -31,8 +32,9 @@ async function fetch() {
 fetch();
 
 // SENDERS
-function sendError(text, msg) {
+function sendOkMsg(text, msg) {
     bot.sendMessage(msg.chat.id, text, {
+        parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [
                 [
@@ -181,6 +183,33 @@ function sendCryptoMenu(msg, isNew = false, symbols = false) {
     }
 }
 
+async function sendSubscribe(cb, symbols) {
+    try {
+        if (!Object.values(cryptoShort).includes(symbols[1]) || !Object.values(currenShort).includes(symbols[2])) {
+            console.log(`Invalid values: ${symbols[1]} -> ${symbols[2]}\n`);
+            sendOkMsg(`Invalid values: ${symbols[1]} -> ${symbols[2]}\n`, msg);
+            return;
+        }
+
+        let text;
+        const user = await Db.findOne({ value2: cb.message.chat.id });
+        if (user) {
+            await Db.findByIdAndUpdate(user._id, { value: `${symbols[1]}_${symbols[2]}` });
+            text = 'Updated!';
+        } else {
+            await Db.create({
+                name: 'user',
+                value: `${symbols[1]}_${symbols[2]}`,
+                value2: cb.message.chat.id,
+            });
+            text = 'Subscribed!';
+        }
+        sendOkMsg(`${text}\n You will recieve crypto rates list in ${symbols[1]} -> ${symbols[2]}`, cb.message);
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 // REQUEST, RESPONSE
 bot.onText(/^(\/data|\/start)/, (msg) => {
     sendCryptoMenu(msg, true);
@@ -209,17 +238,34 @@ bot.onText(/\/compare/, (msg) => {
         invalidNames.forEach((el) => {
             resp += `${names[el]}\n`;
         });
-        sendError(resp, msg);
+        sendOkMsg(resp, msg);
     } else {
         sendCryptoMenu(msg, true, hosts);
     }
 });
+bot.onText(/\/subscribe/, async (msg) => {
+    bot.sendMessage(msg.chat.id, 'Choose currency \nline 1 - Bitcoin\nline 2 - Ethereum', {
+        reply_markup: {
+            inline_keyboard: [
+                Object.values(currenShort).map((el) => {
+                    return { text: el, callback_data: `subscribe_BTC_${el}` };
+                }),
+
+                Object.values(currenShort).map((el) => {
+                    return { text: el, callback_data: `subscribe_ETH_${el}` };
+                }),
+                [{ text: 'Back', callback_data: 'deleteMe' }],
+            ],
+        },
+    });
+});
 bot.onText(/\/help/, (msg) => {
     text =
         '/data - get menu with all platforms\n' +
-        '/compare - get menu with specified platforms (use as /compare platform1 platform2...)\n';
+        '/compare - get menu with specified platforms (use as <b>/compare platform1 platform2</b>...)\n' +
+        '/subscribe - subscribe to mailing (use as <b>/subscribe crypto currency</b>)';
 
-    sendError(text, msg);
+    sendOkMsg(text, msg);
 });
 
 bot.on('callback_query', (cb) => {
@@ -243,6 +289,9 @@ bot.on('callback_query', (cb) => {
             break;
         case '3':
             sendList(cb, symbols, true); // Sorted list
+            break;
+        case 'subscribe':
+            sendSubscribe(cb, symbols);
             break;
         case 'deleteMe':
             bot.deleteMessage(cb.message.chat.id, cb.message.message_id);

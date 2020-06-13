@@ -17,6 +17,7 @@ app.get('/', (req, res) => {
         message: 'U hit / endpoint',
     });
 });
+// MAIN ENDPOINT
 app.post(`/${process.env.BOT_TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
