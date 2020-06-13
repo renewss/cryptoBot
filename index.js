@@ -20,8 +20,8 @@ let interval; // interval of fetch and send cycle
 // supported currencies must be added here
 const cryptoShort = { Bitcoin: 'BTC', Ethereum: 'ETH' };
 const currenShort = { US_Dollar: 'USD', Euro: 'EUR', GB_Pound: 'GBP', Rubl: 'RUB', Indonesian_R: 'IDR' };
-// const hostsAll = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-const hostsAll = [0, 1, 2, 3];
+const hostsAll = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+// const hostsAll = [0, 1, 2, 3];
 
 //
 // ************************************
